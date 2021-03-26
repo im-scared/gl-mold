@@ -17,6 +17,7 @@ function GOL(canvas, scale) {
     this.timer = null;
     this.lasttick = GOL.now();
     this.fps = 0;
+    this.max_fps = 30;
 
     gl.disable(gl.DEPTH_TEST);
     this.programs = {
@@ -210,7 +211,7 @@ GOL.prototype.start = function() {
         this.timer = setInterval(function(){
             gol.step();
             gol.draw();
-        }, 60);
+        }, 1000/this.max_fps);
     }
     return this;
 };
