@@ -194,7 +194,7 @@ function init(
     gl,
     [
       {source: "glsl/p_vis.vert", type: gl.VERTEX_SHADER},
-      {source: "glsl/p_noop.frag", type: gl.FRAGMENT_SHADER},
+      {source: "glsl/p_vis.frag", type: gl.FRAGMENT_SHADER},
     ],
     null);
 
@@ -225,6 +225,16 @@ function init(
     i_Position: {
       location: gl.getAttribLocation(render_program, "i_Position"),
       num_components: 2,
+      type: gl.FLOAT
+    },
+    i_Age: {
+      location: gl.getAttribLocation(render_program, "i_Age"),
+      num_components: 1,
+      type: gl.FLOAT
+    },
+    i_Life: {
+      location: gl.getAttribLocation(render_program, "i_Life"),
+      num_components: 1,
       type: gl.FLOAT
     }
   };
