@@ -453,7 +453,6 @@ function main() {
   var canvas_element = document.getElementById("life");
   var webgl_context = canvas_element.getContext("webgl2");
   if (webgl_context != null) {
-    document.body.appendChild(canvas_element);
     var state =
       init(
         webgl_context,
