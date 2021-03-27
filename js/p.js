@@ -82,17 +82,8 @@ function initialParticleData(num_parts, min_age, max_age) {
  * @param {Function} [callback] if provided, call is asynchronous
  * @returns {string}
  */
-function fetchScript(name, callback) {
-  document.getElementById(name).text
-    // var xhr = new XMLHttpRequest();
-    // xhr.open('GET', url, Boolean(callback));
-    // if (callback != null) {
-    //     xhr.onload = function() {
-    //         callback(xhr.responseText);
-    //     };
-    // }
-    // xhr.send();
-    // return xhr.responseText;
+function fetchScript(name) {
+    return document.getElementById(name).text.trim();
 };
 
 /*
@@ -169,11 +160,6 @@ function init(
   if (max_age < min_age) {
     throw "Invalid min-max age range.";
   }
-  if (max_theta < min_theta ||
-      min_theta < -Math.PI ||
-      max_theta > Math.PI) {
-    throw "Invalid theta range.";
-  }
   if (min_speed > max_speed) {
     throw "Invalid min-max speed range.";
   }
@@ -183,7 +169,7 @@ function init(
     gl,
     [
       {source: "particle-step-vert", type: gl.VERTEX_SHADER},
-      {source: "particle-step-frag", type: gl.FRAGMENT_SHADER},
+      {source: "particle-noop-frag", type: gl.FRAGMENT_SHADER},
     ],
     [
       "v_Position",
@@ -194,8 +180,8 @@ function init(
   var render_program = createGLProgram(
     gl,
     [
-      {source: "particle-rend-vert", type: gl.VERTEX_SHADER},
-      {source: "particle-rend-frag", type: gl.FRAGMENT_SHADER},
+      {source: "particle-render-vert", type: gl.VERTEX_SHADER},
+      {source: "particle-render-frag", type: gl.FRAGMENT_SHADER},
     ],
     null);
 
