@@ -462,7 +462,7 @@ function main() {
         200000, /* number of particles */
         0.8, /* birth rate */
         2.6, 3.0, /* life range */
-        0.0, 2.0*Math.PI
+        0.0, 2.0*Math.PI,
         //Math.PI/2.0 - 0.2, Math.PI/2.0 + 0.2, /* direction range */
         0.5, 0.8, /* speed range */
         [0.0, 0]); /* gravity */
