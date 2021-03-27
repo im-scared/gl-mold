@@ -63,14 +63,16 @@ function initialParticleData(num_parts, min_age, max_age) {
     data.push(0.0);
     data.push(0.0);
 
-    var life = min_age + Math.random() * (max_age - min_age);
-    // set age to max. life + 1 to ensure the particle gets initialized
-    // on first invocation of particle update shader
-    data.push(life + 1);
-    data.push(life);
+    // age and life
+    // start age older than life to force creation in the first frame
+    data.push(1.0);
+    data.push(0.0);
 
     // velocity
     data.push(0.0);
+    data.push(0.0);
+
+    // theta
     data.push(0.0);
   }
   return data;
@@ -176,6 +178,7 @@ function init(
       "v_Age",
       "v_Life",
       "v_Velocity",
+      "v_Theta",
     ]);
   var render_program = createGLProgram(
     gl,
@@ -202,6 +205,11 @@ function init(
       num_components: 1,
       type: gl.FLOAT
     },
+    i_Theta: {
+      location: gl.getAttribLocation(render_program, "i_Theta"),
+      num_components: 1,
+      type: gl.FLOAT
+    },
     i_Velocity: {
       location: gl.getAttribLocation(update_program, "i_Velocity"),
       num_components: 2,
@@ -221,6 +229,11 @@ function init(
     },
     i_Life: {
       location: gl.getAttribLocation(render_program, "i_Life"),
+      num_components: 1,
+      type: gl.FLOAT
+    },
+    i_Theta: {
+      location: gl.getAttribLocation(render_program, "i_Theta"),
       num_components: 1,
       type: gl.FLOAT
     }
@@ -245,7 +258,7 @@ function init(
       vao: vaos[0],
       buffers: [{
         buffer_object: buffers[0],
-        stride: 4 * 6,
+        stride: 4 * 7,
         attribs: update_attrib_locations
       }]
     },
@@ -253,7 +266,7 @@ function init(
       vao: vaos[1],
       buffers: [{
         buffer_object: buffers[1],
-        stride: 4 * 6,
+        stride: 4 * 7,
         attribs: update_attrib_locations
       }]
     },
@@ -261,7 +274,7 @@ function init(
       vao: vaos[2],
       buffers: [{
         buffer_object: buffers[0],
-        stride: 4 * 6,
+        stride: 4 * 7,
         attribs: render_attrib_locations
       }],
     },
@@ -269,7 +282,7 @@ function init(
       vao: vaos[3],
       buffers: [{
         buffer_object: buffers[1],
-        stride: 4 * 6,
+        stride: 4 * 7,
         attribs: render_attrib_locations
       }],
     },
@@ -329,8 +342,11 @@ function init(
     max_theta: max_theta,
     min_speed: min_speed,
     max_speed: max_speed,
+    min_age: min_age,
+    max_age: max_age,
     fps: 0,
-    last_tick_second: 0
+    last_tick_second: 0,
+    random_seed: Math.random()
   };
 }
 
@@ -394,11 +410,11 @@ function render(gl, state, timestamp_millis) {
     state.origin[0],
     state.origin[1]);
   gl.uniform1f(
-    gl.getUniformLocation(state.particle_update_program, "u_MinTheta"),
-    state.min_theta);
+    gl.getUniformLocation(state.particle_update_program, "u_MinAge"),
+    state.min_age);
   gl.uniform1f(
-    gl.getUniformLocation(state.particle_update_program, "u_MaxTheta"),
-    state.max_theta);
+    gl.getUniformLocation(state.particle_update_program, "u_MaxAge"),
+    state.max_age);
   gl.uniform1f(
     gl.getUniformLocation(state.particle_update_program, "u_MinSpeed"),
     state.min_speed);
@@ -408,9 +424,9 @@ function render(gl, state, timestamp_millis) {
   state.total_time += time_delta;
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, state.rg_noise);
-  gl.uniform1i(
-    gl.getUniformLocation(state.particle_update_program, "u_RgNoise"),
-    0);
+  gl.uniform1f(
+    gl.getUniformLocation(state.particle_update_program, "u_RandSeed"),
+    state.random_seed);
 
   /* Bind the "read" buffer - it contains the state of the particle system
     "as of now".*/
@@ -457,20 +473,20 @@ function main() {
     var state =
       init(
         webgl_context,
-        200000, /* number of particles */
-        0.8, /* birth rate */
-        2.6, 3.0, /* life range */
+        400000, /* number of particles */
+        100.0, /* birth rate */
+        2.6, 4.0, /* life range */
         0.0, 2.0*Math.PI,
         //Math.PI/2.0 - 0.2, Math.PI/2.0 + 0.2, /* direction range */
-        0.5, 0.8, /* speed range */
+        0.1, 0.3, /* speed range */
         [0.0, 0]); /* gravity */
 
     /* Makes the particle system follow the mouse pointer */
-    canvas_element.onmousemove = function(e) {
-      var x = 2.0 * (e.pageX - this.offsetLeft)/this.width - 1.0;
-      var y = -(2.0 * (e.pageY - this.offsetTop)/this.height - 1.0);
-      state.origin = [x, y];
-    };
+    // canvas_element.onmousemove = function(e) {
+    //   var x = 2.0 * (e.pageX - this.offsetLeft)/this.width - 1.0;
+    //   var y = -(2.0 * (e.pageY - this.offsetTop)/this.height - 1.0);
+    //   state.origin = [x, y];
+    // };
     window.requestAnimationFrame(
       function(ts) { render(webgl_context, state, ts); });
   } else {
