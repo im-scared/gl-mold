@@ -457,12 +457,12 @@ function main() {
     var state =
       init(
         webgl_context,
-        10000, /* number of particles */
+        50000, /* number of particles */
         0.5, /* birth rate */
-        1.01, 1.15, /* life range */
+        1.01, 1.3, /* life range */
         Math.PI/2.0 - 0.5, Math.PI/2.0 + 0.5, /* direction range */
-        0.5, 1.0, /* speed range */
-        [0.0, -0.8]); /* gravity */
+        0.5, 3.0, /* speed range */
+        [0.0, -1.2]); /* gravity */
 
     /* Makes the particle system follow the mouse pointer */
     canvas_element.onmousemove = function(e) {
