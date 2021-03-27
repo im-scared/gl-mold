@@ -328,7 +328,9 @@ function init(
     min_theta: min_theta,
     max_theta: max_theta,
     min_speed: min_speed,
-    max_speed: max_speed
+    max_speed: max_speed,
+    fps: 0,
+    last_tick_second: 0
   };
 }
 
@@ -339,6 +341,15 @@ function init(
    */
 function render(gl, state, timestamp_millis) {
   var num_part = state.born_particles;
+
+  var current_second = Math.floor(timestamp_millis/1000);
+  if (current_second != state.last_tick_second) {
+    $('.fps').text(state.fps + ' FPS');
+    state.last_tick_second = current_second;
+    state.fps = 0;
+  } else {
+    state.fps += 1;
+  }
 
   /* Calculate time delta. */
   var time_delta = 0.0;
