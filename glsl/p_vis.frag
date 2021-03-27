@@ -18,5 +18,5 @@ void main() {
   c = vec3(2.0, 1.0, 0.0);
   d = vec3(0.50, 0.20, 0.25);
   vec3 col = palette(t, a, b, c, d);
-  o_FragColor = vec4(col, sqrt(1.0 - t*t));
+  o_FragColor = vec4(col, 0.8*sqrt(1.0 - t*t));
 }
