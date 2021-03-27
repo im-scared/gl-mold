@@ -182,7 +182,7 @@ function init(
     gl,
     [
       {source: "glsl/p_step.vert", type: gl.VERTEX_SHADER},
-      {source: "glsl/p_vis.frag", type: gl.FRAGMENT_SHADER},
+      {source: "glsl/p_noop.frag", type: gl.FRAGMENT_SHADER},
     ],
     [
       "v_Position",
@@ -194,7 +194,7 @@ function init(
     gl,
     [
       {source: "glsl/p_vis.vert", type: gl.VERTEX_SHADER},
-      {source: "glsl/p_vis.frag", type: gl.FRAGMENT_SHADER},
+      {source: "glsl/p_noop.frag", type: gl.FRAGMENT_SHADER},
     ],
     null);
 
