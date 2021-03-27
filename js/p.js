@@ -1,6 +1,6 @@
 function createShader(gl, type, source) {
   var shader = gl.createShader(type);
-  gl.shaderSource(shader, source);
+  gl.shaderSource(shader, fetchScript(source));
   gl.compileShader(shader);
   var compile_status = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
   if (!compile_status) {
@@ -75,6 +75,24 @@ function initialParticleData(num_parts, min_age, max_age) {
   }
   return data;
 }
+
+/**
+ * Asynchronously or synchronously fetch data from the server.
+ * @param {string} url
+ * @param {Function} [callback] if provided, call is asynchronous
+ * @returns {string}
+ */
+function fetchScript(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, Boolean(callback));
+    if (callback != null) {
+        xhr.onload = function() {
+            callback(xhr.responseText);
+        };
+    }
+    xhr.send();
+    return xhr.responseText;
+};
 
 /*
   This is a helper function used by the main initialization function.
