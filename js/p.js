@@ -456,7 +456,7 @@ function main() {
     var state =
       init(
         webgl_context,
-        50000, /* number of particles */
+        200000, /* number of particles */
         0.5, /* birth rate */
         1.8, 2, /* life range */
         Math.PI/2.0 - 0.2, Math.PI/2.0 + 0.2, /* direction range */

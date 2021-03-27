@@ -15,7 +15,8 @@ void main() {
   v_Life = i_Life;
 
   /* Vary point size based on age. Make old particles shrink. */
-  gl_PointSize = 1.0 + 6.0 * (1.0 - i_Age/i_Life);
+  float t = i_Age/i_Life;
+  gl_PointSize = 1.0 + 6.0 * sqrt(1.0 - t*t);
 
   gl_Position = vec4(i_Position, 0.0, 1.0);
 }
