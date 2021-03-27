@@ -380,6 +380,9 @@ function render(gl, state, timestamp_millis) {
 
   /* Most of the following is trivial setting of uniforms */
   gl.uniform1f(
+    gl.getUniformLocation(state.particle_update_program, "u_Time"),
+    timestamp_millis / 1000.0);
+  gl.uniform1f(
     gl.getUniformLocation(state.particle_update_program, "u_TimeDelta"),
     time_delta / 1000.0);
   gl.uniform1f(
@@ -458,10 +461,11 @@ function main() {
         webgl_context,
         200000, /* number of particles */
         0.8, /* birth rate */
-        1.8, 2, /* life range */
-        Math.PI/2.0 - 0.2, Math.PI/2.0 + 0.2, /* direction range */
-        0.75, 2.0, /* speed range */
-        [0.0, -2.5]); /* gravity */
+        2.6, 3.0, /* life range */
+        0.0, 2.0*Math.PI
+        //Math.PI/2.0 - 0.2, Math.PI/2.0 + 0.2, /* direction range */
+        0.5, 0.8, /* speed range */
+        [0.0, 0]); /* gravity */
 
     /* Makes the particle system follow the mouse pointer */
     canvas_element.onmousemove = function(e) {

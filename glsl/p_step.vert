@@ -1,6 +1,9 @@
 #version 300 es
 precision mediump float;
 
+/* Number of seconds since the animation started */
+uniform float u_Time;
+
 /* Number of seconds (possibly fractional) that has passed since the last
    update step. */
 uniform float u_TimeDelta;
@@ -49,6 +52,44 @@ out float v_Age;
 out float v_Life;
 out vec2 v_Velocity;
 
+// 2D Random
+float random (in vec2 st) {
+    return fract(sin(dot(st.xy,
+                         vec2(12.9898,78.233)))
+                 * 43758.5453123);
+}
+
+// 2D Noise based on Morgan McGuire @morgan3d
+// https://www.shadertoy.com/view/4dS3Wd
+float noise (in vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + vec2(1.0, 0.0));
+    float c = random(i + vec2(0.0, 1.0));
+    float d = random(i + vec2(1.0, 1.0));
+
+    // Smooth Interpolation
+
+    // Cubic Hermine Curve.  Same as SmoothStep()
+    vec2 u = f*f*(3.0-2.0*f);
+    // u = smoothstep(0.,1.,f);
+
+    // Mix 4 coorners percentages
+    return mix(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+vec2 noise2(in vec2 st, in float offset) {
+  return vec2(
+    noise(st + vec2(offset)),
+    noise(st + vec2(offset * 1.4137))
+  );
+}
+
 void main() {
   if (i_Age >= i_Life) {
     /* Particle has exceeded its lifetime! Time to spawn a new one
@@ -60,15 +101,15 @@ void main() {
        still looks good. I suppose you could get fancier, and sample
        based on particle ID *and* time, or even have a texture where values
        are not-so-random, to control the pattern of generation. */
-    ivec2 noise_coord = ivec2(gl_VertexID % 512, gl_VertexID / 512);
+    vec2 noise_coord = vec2(gl_VertexID * 0.26 * u_Time, gl_VertexID * 1.3 * u_Time);
 
     /* Get the pair of random values. */
-    vec2 rand = texelFetch(u_RgNoise, noise_coord, 0).rg;
+    float r_1 = noise(noise_coord);
 
     /* Decide the direction of the particle based on the first random value.
        The direction is determined by the angle theta that its vector makes
        with the vector (1, 0).*/
-    float theta = u_MinTheta + rand.r*(u_MaxTheta - u_MinTheta);
+    float theta = u_MinTheta + r_1*(u_MaxTheta - u_MinTheta);
 
     /* Derive the x and y components of the direction unit vector.
        This is just basic trig. */
@@ -84,14 +125,16 @@ void main() {
 
     /* Generate final velocity vector. We use the second random value here
        to randomize speed. */
+    float r_2 = noise(noise_coord + vec2(2.76, 3.21));
     v_Velocity =
-      vec2(x, y) * (u_MinSpeed + rand.g * (u_MaxSpeed - u_MinSpeed));
+      vec2(x, y) * (u_MinSpeed + r_2 * (u_MaxSpeed - u_MinSpeed));
 
   } else {
     /* Update parameters according to our simple rules.*/
     v_Position = i_Position + i_Velocity * u_TimeDelta;
     v_Age = i_Age + u_TimeDelta;
     v_Life = i_Life;
-    v_Velocity = i_Velocity + u_Gravity * u_TimeDelta;
+    vec2 force = 4.0 * (2.0 * noise2(i_Position, 4.365) - vec2(1.0));
+    v_Velocity = i_Velocity + u_Gravity * u_TimeDelta + force * u_TimeDelta;
   }
 }
