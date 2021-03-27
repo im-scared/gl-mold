@@ -461,8 +461,8 @@ function main() {
         0.5, /* birth rate */
         1.01, 1.3, /* life range */
         Math.PI/2.0 - 0.5, Math.PI/2.0 + 0.5, /* direction range */
-        0.5, 3.0, /* speed range */
-        [0.0, -1.2]); /* gravity */
+        0.75, 2.0, /* speed range */
+        [0.0, -2.0]); /* gravity */
 
     /* Makes the particle system follow the mouse pointer */
     canvas_element.onmousemove = function(e) {
