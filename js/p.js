@@ -15,7 +15,7 @@ function createShader(gl, type, source) {
 
 /* Creates an OpenGL program object.
    `gl' shall be a WebGL 2 context.
-   `shader_list' shall be a list of objects, each of which have a `name'
+   `shader_list' shall be a list of objects, each of which have a `source'
       and `type' properties. `source' will be used to locate the file
       from which to load the shader. `type' shall indicate shader type (i. e.
       gl.FRAGMENT_SHADER, gl.VERTEX_SHADER, etc.)
@@ -163,8 +163,8 @@ function init(
   var update_program = createGLProgram(
     gl,
     [
-      {name: "glsl/p_step.vert", type: gl.VERTEX_SHADER},
-      {name: "glsl/p_vis.frag", type: gl.FRAGMENT_SHADER},
+      {source: "glsl/p_step.vert", type: gl.VERTEX_SHADER},
+      {source: "glsl/p_vis.frag", type: gl.FRAGMENT_SHADER},
     ],
     [
       "v_Position",
@@ -175,8 +175,8 @@ function init(
   var render_program = createGLProgram(
     gl,
     [
-      {name: "glsl/p_vis.vert", type: gl.VERTEX_SHADER},
-      {name: "glsl/p_vis.frag", type: gl.FRAGMENT_SHADER},
+      {source: "glsl/p_vis.vert", type: gl.VERTEX_SHADER},
+      {source: "glsl/p_vis.frag", type: gl.FRAGMENT_SHADER},
     ],
     null);
 
