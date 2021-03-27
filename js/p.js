@@ -82,16 +82,17 @@ function initialParticleData(num_parts, min_age, max_age) {
  * @param {Function} [callback] if provided, call is asynchronous
  * @returns {string}
  */
-function fetchScript(url, callback) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, Boolean(callback));
-    if (callback != null) {
-        xhr.onload = function() {
-            callback(xhr.responseText);
-        };
-    }
-    xhr.send();
-    return xhr.responseText;
+function fetchScript(name, callback) {
+  document.getElementById(name).text
+    // var xhr = new XMLHttpRequest();
+    // xhr.open('GET', url, Boolean(callback));
+    // if (callback != null) {
+    //     xhr.onload = function() {
+    //         callback(xhr.responseText);
+    //     };
+    // }
+    // xhr.send();
+    // return xhr.responseText;
 };
 
 /*
@@ -181,8 +182,8 @@ function init(
   var update_program = createGLProgram(
     gl,
     [
-      {source: "glsl/p_step.vert", type: gl.VERTEX_SHADER},
-      {source: "glsl/p_noop.frag", type: gl.FRAGMENT_SHADER},
+      {source: "particle-step-vert", type: gl.VERTEX_SHADER},
+      {source: "particle-step-frag", type: gl.FRAGMENT_SHADER},
     ],
     [
       "v_Position",
@@ -193,8 +194,8 @@ function init(
   var render_program = createGLProgram(
     gl,
     [
-      {source: "glsl/p_vis.vert", type: gl.VERTEX_SHADER},
-      {source: "glsl/p_vis.frag", type: gl.FRAGMENT_SHADER},
+      {source: "particle-rend-vert", type: gl.VERTEX_SHADER},
+      {source: "particle-rend-frag", type: gl.FRAGMENT_SHADER},
     ],
     null);
 
