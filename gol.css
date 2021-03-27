@@ -38,7 +38,7 @@ div.description {
 .fps {
     position: absolute;
     top: 0;
-    right: 20px;
+    right: 0;
     color: #666;
     font-size: 12px;
 }
@@ -46,7 +46,7 @@ div.description {
 .ver {
     position: absolute;
     top: 0;
-    right: 0;
+    left: 0;
     color: #666;
     font-size: 12px;
 }
