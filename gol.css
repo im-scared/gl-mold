@@ -38,8 +38,16 @@ div.description {
 .fps {
     position: absolute;
     top: 0;
+    right: 20px;
+    color: #666;
+    font-size: 12px;
+}
+
+.ver {
+    position: absolute;
+    top: 0;
     right: 0;
-    color: #444;
+    color: #666;
     font-size: 12px;
 }
 
