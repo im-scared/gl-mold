@@ -1,9 +1,11 @@
 const shaders = {
     vert: {
         noop: '',
+        spore: '',
     },
     frag: {
         noop: '',
+        spore: '',
     },
 }
 
@@ -77,21 +79,27 @@ function createProgram(gl, vertexShader, fragmentShader) {
     throw error
 }
 
-function setupVao(gl, vaoDescriptor, buffer) {
+function setupVao(gl, buffer, attribs) {
+    let vao = gl.createVertexArray()
+    let stride = getStride(gl, attribs)
+    initVaoAttribs(gl, vao, buffer, stride, attribs)
+    return vao
+}
 
-    gl.bindVertexArray(vaoDescriptor.vao);
+function initVaoAttribs(gl, vao, buffer, stride, attribs) {
+    gl.bindVertexArray(vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
 
     let offset = 0;
-    Object.getOwnPropertyNames(vaoDescriptor.attribs).forEach(attribName => {
-        const attrib = vaoDescriptor.attribs[attribName]
+    Object.getOwnPropertyNames(attribs).forEach(attribName => {
+        const attrib = attribs[attribName]
         gl.enableVertexAttribArray(attrib.location);
         gl.vertexAttribPointer(
             attrib.location,
             attrib.numComponents,
             attrib.type,
             false,
-            vaoDescriptor.stride,
+            stride,
             offset);
 
         /* Note that we're cheating a little bit here: if the buffer has some irrelevant data
@@ -104,6 +112,17 @@ function setupVao(gl, vaoDescriptor, buffer) {
     gl.bindVertexArray(null);
 }
 
+function getStride(gl, attribs) {
+    let stride = 0
+    Object.getOwnPropertyNames(attribs).forEach(attrib => {
+        const type = attribs[attrib].type
+        const components = attribs[attrib].numComponents
+        stride += typeSizes[type] * components
+    })
+
+    return stride
+}
+
 function withAttribLocations(gl, program, attribs) {
     Object.getOwnPropertyNames(attribs).forEach(attribName => {
         attribs[attribName].location = gl.getAttribLocation(program, attribName)
@@ -112,50 +131,54 @@ function withAttribLocations(gl, program, attribs) {
     return attribs
 }
 
-function withStride(gl, vaoDescriptor) {
-    const attribs = vaoDescriptor.attribs
-    let stride = 0
-    Object.getOwnPropertyNames(attribs).forEach(attrib => {
-        const type = attribs[attrib].type
-        const components = attribs[attrib].numComponents
-        stride += typeSizes[type] * components
-    })
+function getInitialBufferData(numSpores) {
+    const data = []
 
-    vaoDescriptor.stride = stride
+    for (let i = 0; i < numSpores; i++) {
+        data.push(0.0) // pos.x
+        data.push(0.0) // pos.y
 
-    return vaoDescriptor
-}
+        const theta = Math.random() * 2 * Math.PI
+        const speed = 5
+        data.push(speed * Math.cos(theta)) // vel.x
+        data.push(speed * Math.sin(theta)) // vel.y
+    }
 
-function getInitialBufferData() {
-    const data = [
-        0, 0,
-        0, 0.5,
-        0.5, 0,
-    ]
     return data
 }
 
-function init(gl) {
-    const renderProgram = createProgram(gl, 'noop', 'noop');
+function init(
+    gl,
+    canvas,
+    numSpores,
+) {
+    const renderProgram = createProgram(gl, 'spore', 'spore');
 
     let renderAttribs = withAttribLocations(gl, renderProgram, {
         i_Position: {
             type: gl.FLOAT,
             numComponents: 2,
-        }
+        },
+        i_Velocity: {
+            type: gl.FLOAT,
+            numComponents: 2,
+        },
     })
 
-    let buffer = gl.createBuffer()
+    let buffers = {
+        read: gl.createBuffer(),
+        write: gl.createBuffer(),
+    }
 
-    const vao = gl.createVertexArray()
-    const vaoDescriptor = withStride(gl, {
-        vao: vao,
-        attribs: renderAttribs,
-    })
-    setupVao(gl, vaoDescriptor, buffer, renderAttribs)
+    let vaos = {
+        read: setupVao(gl, buffers.read, renderAttribs),
+        write: setupVao(gl, buffers.write, renderAttribs),
+    }
 
-    const initialData = new Float32Array(getInitialBufferData())
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+    const initialData = new Float32Array(getInitialBufferData(numSpores))
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.read)
+    gl.bufferData(gl.ARRAY_BUFFER, initialData, gl.STATIC_DRAW)
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.write)
     gl.bufferData(gl.ARRAY_BUFFER, initialData, gl.STATIC_DRAW)
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0)
@@ -166,7 +189,9 @@ function init(gl) {
 
     return {
         program: renderProgram,
-        vao: vao,
+        vaos: vaos,
+        canvas: canvas,
+        numSpores: numSpores,
         fps: 0,
         lastSecond: 0,
     }
@@ -187,11 +212,26 @@ function render(gl, state, millis) {
         state.fps++
     }
 
+    state.canvas.width = state.canvas.clientWidth
+    state.canvas.height = state.canvas.clientHeight
+    gl.viewport(0, 0, state.canvas.width, state.canvas.height)
+
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(state.program);
-    gl.bindVertexArray(state.vao);
+    gl.bindVertexArray(state.vaos.read);
 
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.uniform2f(
+        gl.getUniformLocation(state.program, "u_Resolution"),
+        state.canvas.width,
+        state.canvas.height,
+    );
+
+    gl.uniform1f(
+        gl.getUniformLocation(state.program, "u_Time"),
+        millis / 1000.0,
+    )
+
+    gl.drawArrays(gl.POINTS, 0, state.numSpores);
 
     animate(gl, state)
 }
@@ -205,7 +245,11 @@ async function main() {
 
     await loadPrecursors(gl)
 
-    const state = init(gl)
+    const state = init(
+        gl,
+        canvas,
+        100, // number of mold spores
+    )
 
     animate(gl, state)
 }
