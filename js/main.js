@@ -1,12 +1,8 @@
 const shaders = {
-    vert: {
-        noop: '',
-        spore: '',
-    },
-    frag: {
-        noop: '',
-        spore: '',
-    },
+    shadersToLoad: [
+        "step",
+        "render",
+    ]
 }
 
 const typeSizes = {}
@@ -36,10 +32,15 @@ async function loadShaders() {
         return deferred.promise()
     }
 
-    const shaderPromises = Object.getOwnPropertyNames(shaders)
-        .flatMap(shaderType =>
-            Object.getOwnPropertyNames(shaders[shaderType]).map(shaderName =>
-                fetchShader(shaderType, shaderName)))
+    shaders.vert = {}
+    shaders.frag = {}
+
+    const shaderPromises = shaders.shadersToLoad
+        .flatMap(shaderName =>
+            ['vert', 'frag'].map(shaderType =>
+                fetchShader(shaderType, shaderName)
+            )
+        )
 
     return Promise.all(shaderPromises)
 }
@@ -64,10 +65,18 @@ function createShader(gl, type, name) {
     throw error
 }
 
-function createProgram(gl, vertexShader, fragmentShader) {
+function createProgram(gl, vertexShader, fragmentShader, attribs = null) {
     const program = gl.createProgram()
     gl.attachShader(program, createShader(gl, 'vert', vertexShader))
     gl.attachShader(program, createShader(gl, 'frag', fragmentShader))
+
+    if (attribs) {
+        gl.transformFeedbackVaryings(
+            program,
+            Object.getOwnPropertyNames(attribs).map(attribName => attribName.replace(/^i/, 'v')),
+            gl.INTERLEAVED_ATTRIBS)
+    }
+
     gl.linkProgram(program)
     const success = gl.getProgramParameter(program, gl.LINK_STATUS)
     if (success) {
@@ -79,9 +88,8 @@ function createProgram(gl, vertexShader, fragmentShader) {
     throw error
 }
 
-function setupVao(gl, buffer, attribs) {
+function setupVao(gl, buffer, stride, attribs) {
     let vao = gl.createVertexArray()
-    let stride = getStride(gl, attribs)
     initVaoAttribs(gl, vao, buffer, stride, attribs)
     return vao
 }
@@ -102,9 +110,6 @@ function initVaoAttribs(gl, vao, buffer, stride, attribs) {
             stride,
             offset);
 
-        /* Note that we're cheating a little bit here: if the buffer has some irrelevant data
-           between the attributes that we're interested in, calculating the offset this way
-           would not work. However, in this demo, buffers are laid out in such a way that this code works :) */
         offset += attrib.numComponents * typeSizes[attrib.type];
     })
 
@@ -139,7 +144,7 @@ function getInitialBufferData(numSpores) {
         data.push(0.0) // pos.y
 
         const theta = Math.random() * 2 * Math.PI
-        const speed = 5
+        const speed = 100
         data.push(speed * Math.cos(theta)) // vel.x
         data.push(speed * Math.sin(theta)) // vel.y
     }
@@ -152,27 +157,42 @@ function init(
     canvas,
     numSpores,
 ) {
-    const renderProgram = createProgram(gl, 'spore', 'spore');
-
-    let renderAttribs = withAttribLocations(gl, renderProgram, {
+    const protoRenderAttribs = {
         i_Position: {
             type: gl.FLOAT,
             numComponents: 2,
         },
+    };
+    const protoStepAttribs = {
+        ...protoRenderAttribs,
         i_Velocity: {
             type: gl.FLOAT,
             numComponents: 2,
         },
-    })
+    }
 
-    let buffers = {
+    const stepProgram = createProgram(gl, 'step', 'step', protoStepAttribs);
+    const renderProgram = createProgram(gl, 'render', 'render');
+
+    const stepAttribs = withAttribLocations(gl, stepProgram, protoStepAttribs)
+    const renderAttribs = withAttribLocations(gl, renderProgram, protoRenderAttribs)
+
+    const stride = getStride(gl, protoStepAttribs)
+
+    const buffers = {
         read: gl.createBuffer(),
         write: gl.createBuffer(),
     }
 
-    let vaos = {
-        read: setupVao(gl, buffers.read, renderAttribs),
-        write: setupVao(gl, buffers.write, renderAttribs),
+    const vaos = {
+        step: {
+            read: setupVao(gl, buffers.read, stride, stepAttribs),
+            write: setupVao(gl, buffers.write, stride, stepAttribs),
+        },
+        render: {
+            read: setupVao(gl, buffers.read, stride, renderAttribs),
+            write: setupVao(gl, buffers.write, stride, renderAttribs),
+        },
     }
 
     const initialData = new Float32Array(getInitialBufferData(numSpores))
@@ -180,6 +200,7 @@ function init(
     gl.bufferData(gl.ARRAY_BUFFER, initialData, gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.write)
     gl.bufferData(gl.ARRAY_BUFFER, initialData, gl.STATIC_DRAW)
+    gl.bindBuffer(gl.ARRAY_BUFFER, null)
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0)
 
@@ -188,12 +209,17 @@ function init(
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
     return {
-        program: renderProgram,
+        programs: {
+            step: stepProgram,
+            render: renderProgram,
+        },
+        buffers: buffers,
         vaos: vaos,
         canvas: canvas,
         numSpores: numSpores,
         fps: 0,
         lastSecond: 0,
+        lastMillis: 0,
     }
 }
 
@@ -201,9 +227,31 @@ function animate(gl, state) {
     window.requestAnimationFrame((millis) => render(gl, state, millis))
 }
 
+function swap(obj) {
+    const tmp = obj.read
+    obj.read = obj.write
+    obj.write = tmp
+}
+
+function setUniforms(gl, program, uniformSpec) {
+    Object.getOwnPropertyNames(uniformSpec).forEach(uniform => {
+        const components = uniformSpec[uniform]
+        const uniformLocation = gl.getUniformLocation(program, uniform);
+        if (!Array.isArray(components)) {
+            gl.uniform1f(uniformLocation, components)
+        } else {
+            switch (components.length) {
+                case 2:
+                    gl.uniform2f(uniformLocation, components[0], components[1])
+                    break;
+            }
+        }
+    })
+}
+
 function render(gl, state, millis) {
 
-    let currentSecond = Math.floor(millis / 1000)
+    const currentSecond = Math.floor(millis / 1000)
     if (state.lastSecond !== currentSecond) {
         $("#fps").text(`${state.fps} FPS`)
         state.fps = 0
@@ -212,26 +260,45 @@ function render(gl, state, millis) {
         state.fps++
     }
 
+    const timeDelta = millis - state.lastMillis
+    state.lastMillis = millis
+
     state.canvas.width = state.canvas.clientWidth
     state.canvas.height = state.canvas.clientHeight
     gl.viewport(0, 0, state.canvas.width, state.canvas.height)
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.useProgram(state.program);
-    gl.bindVertexArray(state.vaos.read);
+    gl.useProgram(state.programs.step);
+    gl.bindVertexArray(state.vaos.step.read);
 
-    gl.uniform2f(
-        gl.getUniformLocation(state.program, "u_Resolution"),
-        state.canvas.width,
-        state.canvas.height,
-    );
+    setUniforms(gl, state.programs.step, {
+        u_Resolution: [state.canvas.width, state.canvas.height],
+        u_Time: millis / 1000.0,
+        u_TimeDelta: timeDelta / 1000.0,
+    })
 
-    gl.uniform1f(
-        gl.getUniformLocation(state.program, "u_Time"),
-        millis / 1000.0,
-    )
+    // transform
+    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, state.buffers.write);
+    gl.enable(gl.RASTERIZER_DISCARD);
+    gl.beginTransformFeedback(gl.POINTS);
+    gl.drawArrays(gl.POINTS, 0, state.numSpores);
+    gl.endTransformFeedback();
+    gl.disable(gl.RASTERIZER_DISCARD);
+    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+
+    // render
+    gl.useProgram(state.programs.render);
+    gl.bindVertexArray(state.vaos.render.read)
+
+    setUniforms(gl, state.programs.render, {
+        u_Resolution: [state.canvas.width, state.canvas.height],
+    })
 
     gl.drawArrays(gl.POINTS, 0, state.numSpores);
+
+    swap(state.buffers)
+    swap(state.vaos.step)
+    swap(state.vaos.render)
 
     animate(gl, state)
 }
