@@ -11,6 +11,10 @@ function loadTypes(gl) {
     typeSizes[gl.FLOAT] = 4
 }
 
+function orElse(value, predicate, altValue) {
+    return predicate(value) ? value : altValue
+}
+
 async function loadShaders() {
     const fetchShader = async (shaderType, shaderName) => {
         const deferred = new $.Deferred()
@@ -144,7 +148,7 @@ function getInitialBufferData(numSpores) {
         data.push(0.0) // pos.y
 
         const theta = Math.random() * 2 * Math.PI
-        const speed = 100
+        const speed = 200
         data.push(speed * Math.cos(theta)) // vel.x
         data.push(speed * Math.sin(theta)) // vel.y
     }
@@ -249,22 +253,7 @@ function setUniforms(gl, program, uniformSpec) {
     })
 }
 
-function render(gl, state, millis) {
-
-    const currentSecond = Math.floor(millis / 1000)
-    if (state.lastSecond !== currentSecond) {
-        $("#fps").text(`${state.fps} FPS`)
-        state.fps = 0
-        state.lastSecond = currentSecond
-    } else {
-        state.fps++
-    }
-
-    const timeDelta = millis - state.lastMillis
-    state.lastMillis = millis
-
-    state.canvas.width = state.canvas.clientWidth
-    state.canvas.height = state.canvas.clientHeight
+function renderGl(gl, state, millis, timeDelta) {
     gl.viewport(0, 0, state.canvas.width, state.canvas.height)
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -299,6 +288,26 @@ function render(gl, state, millis) {
     swap(state.buffers)
     swap(state.vaos.step)
     swap(state.vaos.render)
+}
+
+function render(gl, state, millis) {
+
+    const currentSecond = Math.floor(millis / 1000)
+    if (state.lastSecond !== currentSecond) {
+        $("#fps").text(`${state.fps} FPS`)
+        state.fps = 0
+        state.lastSecond = currentSecond
+    } else {
+        state.fps++
+    }
+
+    const timeDelta = orElse(millis - state.lastMillis, v => v < 1000, 1000)
+    state.lastMillis = millis
+
+    state.canvas.width = state.canvas.clientWidth
+    state.canvas.height = state.canvas.clientHeight
+
+    renderGl(gl, state, millis, timeDelta);
 
     animate(gl, state)
 }
@@ -315,7 +324,7 @@ async function main() {
     const state = init(
         gl,
         canvas,
-        100, // number of mold spores
+        100000, // number of mold spores
     )
 
     animate(gl, state)
