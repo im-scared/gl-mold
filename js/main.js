@@ -11,10 +11,6 @@ function loadTypes(gl) {
     typeSizes[gl.FLOAT] = 4
 }
 
-function orElse(value, predicate, altValue) {
-    return predicate(value) ? value : altValue
-}
-
 async function loadShaders() {
     const fetchShader = async (shaderType, shaderName) => {
         const deferred = new $.Deferred()
@@ -162,9 +158,13 @@ function getInitialBufferData(
 function init(
     gl,
     canvas,
+    version,
+    maxFps,
     numSpores,
     initialSpeed,
 ) {
+    $('#version').text(`v${version}`)
+
     const protoRenderAttribs = {
         i_Position: {
             type: gl.FLOAT,
@@ -229,6 +229,7 @@ function init(
         vaos: vaos,
         canvas: canvas,
         numSpores: numSpores,
+        maxFps: maxFps,
         fps: 0,
         lastSecond: 0,
         lastMillis: 0,
@@ -264,34 +265,34 @@ function setUniforms(gl, program, uniformSpec) {
 function renderGl(gl, state, millis, timeDelta) {
     gl.viewport(0, 0, state.canvas.width, state.canvas.height)
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.useProgram(state.programs.step);
-    gl.bindVertexArray(state.vaos.step.read);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    gl.useProgram(state.programs.step)
+    gl.bindVertexArray(state.vaos.step.read)
 
     setUniforms(gl, state.programs.step, {
         u_Resolution: [state.canvas.width, state.canvas.height],
         u_Time: millis / 1000.0,
-        u_TimeDelta: timeDelta / 1000.0,
+        u_TimeDelta: Math.min(timeDelta / 1000.0, 1),
     })
 
     // transform
-    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, state.buffers.write);
-    gl.enable(gl.RASTERIZER_DISCARD);
-    gl.beginTransformFeedback(gl.POINTS);
-    gl.drawArrays(gl.POINTS, 0, state.numSpores);
-    gl.endTransformFeedback();
-    gl.disable(gl.RASTERIZER_DISCARD);
-    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, state.buffers.write)
+    gl.enable(gl.RASTERIZER_DISCARD)
+    gl.beginTransformFeedback(gl.POINTS)
+    gl.drawArrays(gl.POINTS, 0, state.numSpores)
+    gl.endTransformFeedback()
+    gl.disable(gl.RASTERIZER_DISCARD)
+    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null)
 
     // render
-    gl.useProgram(state.programs.render);
+    gl.useProgram(state.programs.render)
     gl.bindVertexArray(state.vaos.render.read)
 
     setUniforms(gl, state.programs.render, {
         u_Resolution: [state.canvas.width, state.canvas.height],
     })
 
-    gl.drawArrays(gl.POINTS, 0, state.numSpores);
+    gl.drawArrays(gl.POINTS, 0, state.numSpores)
 
     swap(state.buffers)
     swap(state.vaos.step)
@@ -300,16 +301,20 @@ function renderGl(gl, state, millis, timeDelta) {
 
 function render(gl, state, millis) {
 
+    const timeDelta = millis - state.lastMillis
+    if (timeDelta < 1000.0/state.maxFps) {
+        animate(gl, state)
+        return
+    }
+
     const currentSecond = Math.floor(millis / 1000)
     if (state.lastSecond !== currentSecond) {
         $("#fps").text(`${state.fps} FPS`)
-        state.fps = 0
+        state.fps = 1
         state.lastSecond = currentSecond
     } else {
         state.fps++
     }
-
-    const timeDelta = orElse(millis - state.lastMillis, v => v < 1000, 1000)
     state.lastMillis = millis
 
     state.canvas.width = state.canvas.clientWidth
@@ -332,8 +337,10 @@ async function main() {
     const state = init(
         gl,
         canvas,
+        '0.2.0', // version
+        120, // max fps
         100000, // number of mold spores
-        600, // speed
+        400, // speed
     )
 
     animate(gl, state)
