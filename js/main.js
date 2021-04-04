@@ -140,7 +140,10 @@ function withAttribLocations(gl, program, attribs) {
     return attribs
 }
 
-function getInitialBufferData(numSpores) {
+function getInitialBufferData(
+    numSpores,
+    initialSpeed,
+) {
     const data = []
 
     for (let i = 0; i < numSpores; i++) {
@@ -148,7 +151,7 @@ function getInitialBufferData(numSpores) {
         data.push(0.0) // pos.y
 
         const theta = Math.random() * 2 * Math.PI
-        const speed = 200
+        const speed = initialSpeed
         data.push(speed * Math.cos(theta)) // vel.x
         data.push(speed * Math.sin(theta)) // vel.y
     }
@@ -160,6 +163,7 @@ function init(
     gl,
     canvas,
     numSpores,
+    initialSpeed,
 ) {
     const protoRenderAttribs = {
         i_Position: {
@@ -199,7 +203,11 @@ function init(
         },
     }
 
-    const initialData = new Float32Array(getInitialBufferData(numSpores))
+    // Initialize data buffers
+    const initialData = new Float32Array(getInitialBufferData(
+        numSpores,
+        initialSpeed
+    ))
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.read)
     gl.bufferData(gl.ARRAY_BUFFER, initialData, gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.write)
@@ -325,6 +333,7 @@ async function main() {
         gl,
         canvas,
         100000, // number of mold spores
+        600, // speed
     )
 
     animate(gl, state)
